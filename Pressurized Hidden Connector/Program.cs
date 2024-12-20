@@ -37,10 +37,10 @@ namespace IngameScript
         {
             Runtime.UpdateFrequency = UpdateFrequency.Update100;
             
-            CollectTextSurfaces();
+            CollectTextSurfaces("PistonControlScreen");
         }
 
-        private void CollectTextSurfaces()
+        private void CollectTextSurfaces(string controlSurfaceName)
         {
             _textSurfaces.RemoveAll(_ => true);
             
@@ -51,11 +51,11 @@ namespace IngameScript
             foreach (IMyTextSurfaceProvider textSurfaceProvider in textSurfaceProviders)
             {
                 var myTerminalBlock = textSurfaceProvider as IMyTerminalBlock;
-                if (myTerminalBlock != null && myTerminalBlock.CustomData.Contains("PistonControlScreen"))
+                if (myTerminalBlock != null && myTerminalBlock.CustomData.Contains(controlSurfaceName))
                 {
                     foreach (string dataLine in myTerminalBlock.CustomData.Split('\n'))
                     {
-                        if (dataLine.StartsWith("PistonControlScreen"))
+                        if (dataLine.StartsWith(controlSurfaceName))
                         {
                             int index = Convert.ToInt32(dataLine.Split(':')[1].Trim());
                             _textSurfaces.Add(textSurfaceProvider.GetSurface(index));
