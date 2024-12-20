@@ -27,9 +27,24 @@ namespace IngameScript
         List<IMyAirtightHangarDoor> _airlockBlocks = new List<IMyAirtightHangarDoor>();
         MyCommandLine _commandLine = new MyCommandLine();
 
+        List<IMyTextSurface> _textSurfaces = new List<IMyTextSurface>();
+
         public Program()
         {
             Runtime.UpdateFrequency = UpdateFrequency.Update100;
+
+            _textSurfaces.Add(Me.GetSurface(0));
+            
+            List<IMyTerminalBlock> allBlocksWithName = new List<IMyTerminalBlock>();
+            GridTerminalSystem.SearchBlocksOfName("LCD piston control", allBlocksWithName);
+            foreach (IMyTerminalBlock block in allBlocksWithName)
+            {
+                var provider = block as IMyTextSurfaceProvider;
+                if (provider != null)
+                {
+                    _textSurfaces.Add(provider.GetSurface(0));
+                }
+            }
         }
 
         public void Save()
@@ -44,6 +59,10 @@ namespace IngameScript
 
         public void Main(string argument, UpdateType updateSource)
         {
+            StringBuilder debug = new StringBuilder();
+
+            debug.Append("piston: ").AppendLine(_piston != null ? _piston.DisplayNameText : "-");
+            debug.Append("airlock: ").AppendLine(_airlockBlocks.Count.ToString());
             if (updateSource == UpdateType.Trigger || updateSource == UpdateType.Terminal)
             {
                 if (_commandLine.TryParse(argument))
@@ -54,28 +73,25 @@ namespace IngameScript
 
                 if (_piston == null || _airlockBlocks.Count == 0)
                 {
-                    Echo("Please enter a valid piston or airlock block group");
+                    debug.AppendLine("Please enter a valid piston and airlock block group");
+                    WriteOutput(debug);
                     return;
                 }
 
                 if (_airlockBlocks.TrueForAll(door => door.Status == DoorStatus.Closed))
                 {
-                    Echo("The airlock block group is closed");
+                    debug.AppendLine("The airlock block group is closed");
                     OpenHangarDoors();
                 }
                 else if (_airlockBlocks.TrueForAll(door => door.Status != DoorStatus.Closed))
                 {
-                    Echo("The airlock block group is open");
+                    debug.AppendLine("The airlock block group is open");
                     CloseHangarDoors();
                 }
 
-                foreach (IMyAirtightHangarDoor door in _airlockBlocks)
-                {
-                    Echo(door.OpenRatio.ToString());
-                    Echo(door.Closed ? "closed" : "open");
-                    Echo(door.Status.ToString());
-                }
-            } else if (updateSource == UpdateType.Update100)
+                DoorStatusCheck(debug);
+            }
+            else if (updateSource == UpdateType.Update100 && _airlockBlocks.Count > 0 && _piston != null)
             {
                 if (_airlockBlocks.TrueForAll(door => door.OpenRatio >= OpenRatio && door.Status == DoorStatus.Opening))
                 {
@@ -83,16 +99,51 @@ namespace IngameScript
                     {
                         door.Enabled = false;
                     }
+
+                    _piston.Extend();
                 }
+                DoorStatusCheck(debug);
+            }
+
+            WriteOutput(debug);
+        }
+
+        private void DoorStatusCheck(StringBuilder output)
+        {
+            foreach (IMyAirtightHangarDoor door in _airlockBlocks)
+            {
+                output.Append(door.OpenRatio.ToString())
+                    .Append(" | ")
+                    .Append(door.Closed ? "closed" : "open")
+                    .Append(" | ")
+                    .AppendLine(door.Status.ToString());
+            }
+        }
+
+        private void WriteOutput(StringBuilder output)
+        {
+            Echo(output.ToString());
+            foreach (IMyTextSurface surface in _textSurfaces)
+            {
+                surface.ContentType = ContentType.TEXT_AND_IMAGE;
+                surface.Font = "Green";
+                surface.WriteText(output.ToString());
             }
         }
 
         private void CloseHangarDoors()
         {
-            foreach (IMyAirtightHangarDoor hangarDoor in _airlockBlocks)
+            if (_piston.Status == PistonStatus.Retracted)
             {
-                hangarDoor.Enabled = true;
-                hangarDoor.CloseDoor();
+                foreach (IMyAirtightHangarDoor hangarDoor in _airlockBlocks)
+                {
+                    hangarDoor.Enabled = true;
+                    hangarDoor.CloseDoor();
+                }
+            }
+            else
+            {
+                
             }
         }
 
