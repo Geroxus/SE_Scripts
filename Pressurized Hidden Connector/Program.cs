@@ -23,7 +23,6 @@ namespace IngameScript
     partial class Program : MyGridProgram
     {
         private const float OpenRatio = 0.6f;
-        private const float CloseRatio = 0.1f;
 
         private State _state = State.TowardsClose;
 
@@ -39,14 +38,26 @@ namespace IngameScript
 
             _textSurfaces.Add(Me.GetSurface(0));
 
-            List<IMyTerminalBlock> allBlocksWithName = new List<IMyTerminalBlock>();
-            GridTerminalSystem.SearchBlocksOfName("LCD piston control", allBlocksWithName);
-            foreach (IMyTerminalBlock block in allBlocksWithName)
+            CollectTextSurfaces();
+        }
+
+        private void CollectTextSurfaces()
+        {
+            List<IMyTextSurfaceProvider> textSurfaceProviders = new List<IMyTextSurfaceProvider>();
+            GridTerminalSystem.GetBlocksOfType<IMyTextSurfaceProvider>(textSurfaceProviders);
+            foreach (IMyTextSurfaceProvider textSurfaceProvider in textSurfaceProviders)
             {
-                var provider = block as IMyTextSurfaceProvider;
-                if (provider != null)
+                var myTerminalBlock = textSurfaceProvider as IMyTerminalBlock;
+                if (myTerminalBlock != null && myTerminalBlock.CustomData.Contains("PistonControlScreen"))
                 {
-                    _textSurfaces.Add(provider.GetSurface(0));
+                    foreach (string dataLine in myTerminalBlock.CustomData.Split('\n'))
+                    {
+                        if (dataLine.StartsWith("PistonControlScreen"))
+                        {
+                            int index = Convert.ToInt32(dataLine.Split(':')[1].Trim());
+                            _textSurfaces.Add(textSurfaceProvider.GetSurface(index));
+                        }
+                    }
                 }
             }
         }
@@ -65,6 +76,7 @@ namespace IngameScript
         {
             StringBuilder debug = new StringBuilder();
 
+            debug.Append("State: ").AppendLine(_state.ToString());
             debug.Append("piston: ").AppendLine(_piston != null ? _piston.DisplayNameText : "-");
             debug.Append("airlock: ").AppendLine(_airlockBlocks.Count.ToString());
             if (updateSource == UpdateType.Trigger)
@@ -78,8 +90,10 @@ namespace IngameScript
                         _state = State.TowardsClose;
                         break;
                 }
+
                 ToggleDoors();
-            } else if (updateSource == UpdateType.Terminal)
+            }
+            else if (updateSource == UpdateType.Terminal)
             {
                 // Initblock is needed once.
                 if (_commandLine.TryParse(argument))
@@ -94,41 +108,58 @@ namespace IngameScript
                     WriteOutput(debug);
                     return;
                 }
+
                 StatusCheck(debug);
             }
             else if (updateSource == UpdateType.Update100 && _airlockBlocks.Count > 0 && _piston != null)
             {
                 ToggleDoors();
-                // Stop Doors (I think...wtf I do here?)
-                bool doorsInRestrictedOpenState = _airlockBlocks.TrueForAll(door =>
-                    door.OpenRatio >= OpenRatio && door.Status == DoorStatus.Opening);
-                if (_state == State.TowardsOpen && _piston.Status == PistonStatus.Retracted && doorsInRestrictedOpenState)
-                {
-                    foreach (IMyAirtightHangarDoor door in _airlockBlocks)
-                    {
-                        door.Enabled = false;
-                    }
-                    _piston.Extend();
-                }
-                else if (_state == State.TowardsClose && _piston.Status == PistonStatus.Retracting && doorsInRestrictedOpenState)
-                {
-                    CloseHangarDoors();
-                }
-
+                TogglePiston();
                 StatusCheck(debug);
             }
 
             WriteOutput(debug);
         }
 
+        private void TogglePiston()
+        {
+            switch (_state)
+            {
+                case State.TowardsOpen:
+                    bool doorsInRestrictedOpenState = _airlockBlocks.TrueForAll(door =>
+                        door.OpenRatio >= OpenRatio && door.Status == DoorStatus.Opening);
+                    if (doorsInRestrictedOpenState) _piston.Extend();
+                    break;
+                case State.TowardsClose:
+                    _piston.Retract();
+                    break;
+            }
+        }
+
         private void ToggleDoors()
         {
-            if (_state == State.TowardsClose)
+            switch (_state)
             {
-                CloseHangarDoors();
-            } else if (_state == State.TowardsOpen)
-            {
-                OpenHangarDoors();
+                case State.TowardsClose:
+                    if (_piston.Status == PistonStatus.Retracted)
+                    {
+                        foreach (IMyAirtightHangarDoor hangarDoor in _airlockBlocks)
+                        {
+                            hangarDoor.Enabled = true;
+                            hangarDoor.CloseDoor();
+                        }
+                    }
+                    break;
+                case State.TowardsOpen:
+                {
+                    foreach (IMyAirtightHangarDoor hangarDoor in _airlockBlocks)
+                    {
+                        hangarDoor.OpenDoor();
+                        if (hangarDoor.OpenRatio >= OpenRatio) hangarDoor.Enabled = false;
+                    }
+
+                    break;
+                }
             }
         }
 
@@ -155,30 +186,6 @@ namespace IngameScript
                 surface.ContentType = ContentType.TEXT_AND_IMAGE;
                 surface.Font = "Green";
                 surface.WriteText(output.ToString());
-            }
-        }
-
-        private void CloseHangarDoors()
-        {
-            if (_piston.Status == PistonStatus.Retracted)
-            {
-                foreach (IMyAirtightHangarDoor hangarDoor in _airlockBlocks)
-                {
-                    hangarDoor.Enabled = true;
-                    hangarDoor.CloseDoor();
-                }
-            }
-            else
-            {
-                _piston.Retract();
-            }
-        }
-
-        private void OpenHangarDoors()
-        {
-            foreach (IMyAirtightHangarDoor hangarDoor in _airlockBlocks)
-            {
-                hangarDoor.OpenDoor();
             }
         }
 
