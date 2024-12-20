@@ -22,7 +22,11 @@ namespace IngameScript
 {
     partial class Program : MyGridProgram
     {
-        private static readonly float OpenRatio = 0.6f;
+        private const float OpenRatio = 0.6f;
+        private const float CloseRatio = 0.1f;
+
+        private State _state = State.TowardsClose;
+
         IMyPistonBase _piston = null;
         List<IMyAirtightHangarDoor> _airlockBlocks = new List<IMyAirtightHangarDoor>();
         MyCommandLine _commandLine = new MyCommandLine();
@@ -34,7 +38,7 @@ namespace IngameScript
             Runtime.UpdateFrequency = UpdateFrequency.Update100;
 
             _textSurfaces.Add(Me.GetSurface(0));
-            
+
             List<IMyTerminalBlock> allBlocksWithName = new List<IMyTerminalBlock>();
             GridTerminalSystem.SearchBlocksOfName("LCD piston control", allBlocksWithName);
             foreach (IMyTerminalBlock block in allBlocksWithName)
@@ -63,8 +67,21 @@ namespace IngameScript
 
             debug.Append("piston: ").AppendLine(_piston != null ? _piston.DisplayNameText : "-");
             debug.Append("airlock: ").AppendLine(_airlockBlocks.Count.ToString());
-            if (updateSource == UpdateType.Trigger || updateSource == UpdateType.Terminal)
+            if (updateSource == UpdateType.Trigger)
             {
+                switch (_state)
+                {
+                    case State.TowardsClose:
+                        _state = State.TowardsOpen;
+                        break;
+                    case State.TowardsOpen:
+                        _state = State.TowardsClose;
+                        break;
+                }
+                ToggleDoors();
+            } else if (updateSource == UpdateType.Terminal)
+            {
+                // Initblock is needed once.
                 if (_commandLine.TryParse(argument))
                 {
                     _piston = GridTerminalSystem.GetBlockWithName(_commandLine.Argument(0)) as IMyPistonBase;
@@ -77,47 +94,57 @@ namespace IngameScript
                     WriteOutput(debug);
                     return;
                 }
-
-                if (_airlockBlocks.TrueForAll(door => door.Status == DoorStatus.Closed))
-                {
-                    debug.AppendLine("The airlock block group is closed");
-                    OpenHangarDoors();
-                }
-                else if (_airlockBlocks.TrueForAll(door => door.Status != DoorStatus.Closed))
-                {
-                    debug.AppendLine("The airlock block group is open");
-                    CloseHangarDoors();
-                }
-
-                DoorStatusCheck(debug);
+                StatusCheck(debug);
             }
             else if (updateSource == UpdateType.Update100 && _airlockBlocks.Count > 0 && _piston != null)
             {
-                if (_airlockBlocks.TrueForAll(door => door.OpenRatio >= OpenRatio && door.Status == DoorStatus.Opening))
+                ToggleDoors();
+                // Stop Doors (I think...wtf I do here?)
+                bool doorsInRestrictedOpenState = _airlockBlocks.TrueForAll(door =>
+                    door.OpenRatio >= OpenRatio && door.Status == DoorStatus.Opening);
+                if (_state == State.TowardsOpen && _piston.Status == PistonStatus.Retracted && doorsInRestrictedOpenState)
                 {
                     foreach (IMyAirtightHangarDoor door in _airlockBlocks)
                     {
                         door.Enabled = false;
                     }
-
                     _piston.Extend();
                 }
-                DoorStatusCheck(debug);
+                else if (_state == State.TowardsClose && _piston.Status == PistonStatus.Retracting && doorsInRestrictedOpenState)
+                {
+                    CloseHangarDoors();
+                }
+
+                StatusCheck(debug);
             }
 
             WriteOutput(debug);
         }
 
-        private void DoorStatusCheck(StringBuilder output)
+        private void ToggleDoors()
+        {
+            if (_state == State.TowardsClose)
+            {
+                CloseHangarDoors();
+            } else if (_state == State.TowardsOpen)
+            {
+                OpenHangarDoors();
+            }
+        }
+
+        private void StatusCheck(StringBuilder output)
         {
             foreach (IMyAirtightHangarDoor door in _airlockBlocks)
             {
-                output.Append(door.OpenRatio.ToString())
-                    .Append(" | ")
-                    .Append(door.Closed ? "closed" : "open")
+                output.Append(door.DisplayNameText)
+                    .Append(": ")
+                    .Append(Math.Round(door.OpenRatio, 2).ToString())
                     .Append(" | ")
                     .AppendLine(door.Status.ToString());
             }
+
+            output.Append("Piston: ")
+                .AppendLine(_piston.Status.ToString());
         }
 
         private void WriteOutput(StringBuilder output)
@@ -143,7 +170,7 @@ namespace IngameScript
             }
             else
             {
-                
+                _piston.Retract();
             }
         }
 
@@ -153,6 +180,12 @@ namespace IngameScript
             {
                 hangarDoor.OpenDoor();
             }
+        }
+
+        enum State
+        {
+            TowardsOpen,
+            TowardsClose
         }
     }
 }
