@@ -27,6 +27,7 @@ namespace IngameScript
         private State _state = State.TowardsClose;
 
         IMyPistonBase _piston = null;
+        IMyDoor _door = null;
         List<IMyAirtightHangarDoor> _airlockBlocks = new List<IMyAirtightHangarDoor>();
         MyCommandLine _commandLine = new MyCommandLine();
 
@@ -35,14 +36,16 @@ namespace IngameScript
         public Program()
         {
             Runtime.UpdateFrequency = UpdateFrequency.Update100;
-
-            _textSurfaces.Add(Me.GetSurface(0));
-
+            
             CollectTextSurfaces();
         }
 
         private void CollectTextSurfaces()
         {
+            _textSurfaces.RemoveAll(_ => true);
+            
+            _textSurfaces.Add(Me.GetSurface(0));
+            
             List<IMyTextSurfaceProvider> textSurfaceProviders = new List<IMyTextSurfaceProvider>();
             GridTerminalSystem.GetBlocksOfType<IMyTextSurfaceProvider>(textSurfaceProviders);
             foreach (IMyTextSurfaceProvider textSurfaceProvider in textSurfaceProviders)
@@ -90,8 +93,8 @@ namespace IngameScript
                         _state = State.TowardsClose;
                         break;
                 }
-
-                ToggleDoors();
+                StatusCheck(debug);
+                ToggleHangarDoors();
             }
             else if (updateSource == UpdateType.Terminal)
             {
@@ -100,11 +103,12 @@ namespace IngameScript
                 {
                     _piston = GridTerminalSystem.GetBlockWithName(_commandLine.Argument(0)) as IMyPistonBase;
                     GridTerminalSystem.GetBlockGroupWithName(_commandLine.Argument(1)).GetBlocksOfType(_airlockBlocks);
+                    _door = GridTerminalSystem.GetBlockWithName(_commandLine.Argument(2)) as IMyDoor;
                 }
 
-                if (_piston == null || _airlockBlocks.Count == 0)
+                if (_piston == null || _door == null || _airlockBlocks.Count == 0)
                 {
-                    debug.AppendLine("Please enter a valid piston and airlock block group");
+                    debug.AppendLine("Please enter a valid piston, door and airlock block group");
                     WriteOutput(debug);
                     return;
                 }
@@ -113,12 +117,31 @@ namespace IngameScript
             }
             else if (updateSource == UpdateType.Update100 && _airlockBlocks.Count > 0 && _piston != null)
             {
-                ToggleDoors();
+                ToggleDoor();
+                ToggleHangarDoors();
                 TogglePiston();
                 StatusCheck(debug);
             }
 
             WriteOutput(debug);
+        }
+
+        private void ToggleDoor()
+        {
+            switch (_state)
+            {
+                case State.TowardsOpen:
+                    _door.CloseDoor();
+                    if (_door.Status == DoorStatus.Closed) _door.Enabled = false;
+                    break;
+                case State.TowardsClose:
+                    if (_airlockBlocks.TrueForAll(door => door.Status == DoorStatus.Closed))
+                    {
+                        _door.Enabled = true;
+                        _door.OpenDoor();
+                    }
+                    break;
+            }
         }
 
         private void TogglePiston()
@@ -136,7 +159,7 @@ namespace IngameScript
             }
         }
 
-        private void ToggleDoors()
+        private void ToggleHangarDoors()
         {
             switch (_state)
             {
@@ -152,12 +175,12 @@ namespace IngameScript
                     break;
                 case State.TowardsOpen:
                 {
+                    if (_door.Status != DoorStatus.Closed) break;
                     foreach (IMyAirtightHangarDoor hangarDoor in _airlockBlocks)
                     {
                         hangarDoor.OpenDoor();
                         if (hangarDoor.OpenRatio >= OpenRatio) hangarDoor.Enabled = false;
                     }
-
                     break;
                 }
             }
@@ -176,6 +199,9 @@ namespace IngameScript
 
             output.Append("Piston: ")
                 .AppendLine(_piston.Status.ToString());
+            
+            output.Append("Door: ")
+                .AppendLine(_door.Status.ToString());
         }
 
         private void WriteOutput(StringBuilder output)
