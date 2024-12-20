@@ -4,6 +4,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pressurized Hidden Connecto
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GridStats", "GridStats\GridStats.csproj", "{6050E7F8-D4F0-4A98-923F-E7BB061AFD24}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GridManager", "GridManager\GridManager.csproj", "{7B464795-4D60-4281-963B-E2868B6C96E4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -18,5 +20,9 @@ Global
 		{6050E7F8-D4F0-4A98-923F-E7BB061AFD24}.Debug|x64.Build.0 = Debug|x64
 		{6050E7F8-D4F0-4A98-923F-E7BB061AFD24}.Release|x64.ActiveCfg = Release|x64
 		{6050E7F8-D4F0-4A98-923F-E7BB061AFD24}.Release|x64.Build.0 = Release|x64
+		{7B464795-4D60-4281-963B-E2868B6C96E4}.Debug|x64.ActiveCfg = Debug|x64
+		{7B464795-4D60-4281-963B-E2868B6C96E4}.Debug|x64.Build.0 = Debug|x64
+		{7B464795-4D60-4281-963B-E2868B6C96E4}.Release|x64.ActiveCfg = Release|x64
+		{7B464795-4D60-4281-963B-E2868B6C96E4}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 EndGlobal
