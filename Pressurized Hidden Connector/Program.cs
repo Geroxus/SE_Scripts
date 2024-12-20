@@ -22,28 +22,13 @@ namespace IngameScript
 {
     partial class Program : MyGridProgram
     {
-        // This file contains your actual script.
-        //
-        // You can either keep all your code here, or you can create separate
-        // code files to make your program easier to navigate while coding.
-        //
-        // Go to:
-        // https://github.com/malware-dev/MDK-SE/wiki/Quick-Introduction-to-Space-Engineers-Ingame-Scripts
-        //
-        // to learn more about ingame scripts.
+        IMyPistonBase piston = null;
+        List<IMyAirtightHangarDoor> airlockBlocks = new List<IMyAirtightHangarDoor>();
+        MyCommandLine _commandLine = new MyCommandLine();
 
         public Program()
         {
-            // The constructor, called only once every session and
-            // always before any other method is called. Use it to
-            // initialize your script. 
-            //     
-            // The constructor is optional and can be removed if not
-            // needed.
-            // 
-            // It's recommended to set Runtime.UpdateFrequency 
-            // here, which will allow your script to run itself without a 
-            // timer block.
+            Runtime.UpdateFrequency = UpdateFrequency.Update100;
         }
 
         public void Save()
@@ -58,15 +43,64 @@ namespace IngameScript
 
         public void Main(string argument, UpdateType updateSource)
         {
-            // The main entry point of the script, invoked every time
-            // one of the programmable block's Run actions are invoked,
-            // or the script updates itself. The updateSource argument
-            // describes where the update came from. Be aware that the
-            // updateSource is a  bitfield  and might contain more than 
-            // one update type.
-            // 
-            // The method itself is required, but the arguments above
-            // can be removed if not needed.
+            if (updateSource == UpdateType.Trigger || updateSource == UpdateType.Terminal)
+            {
+                if (_commandLine.TryParse(argument))
+                {
+                    piston = GridTerminalSystem.GetBlockWithName(_commandLine.Argument(0)) as IMyPistonBase;
+                    GridTerminalSystem.GetBlockGroupWithName(_commandLine.Argument(1)).GetBlocksOfType(airlockBlocks);
+                }
+
+                if (piston == null || airlockBlocks.Count == 0)
+                {
+                    Echo("Please enter a valid piston or airlock block group");
+                    return;
+                }
+
+                if (airlockBlocks.TrueForAll(door => door.Status == DoorStatus.Closed))
+                {
+                    Echo("The airlock block group is closed");
+                    OpenHangarDoors();
+                }
+                else if (airlockBlocks.TrueForAll(door => door.Status != DoorStatus.Closed))
+                {
+                    Echo("The airlock block group is open");
+                    CloseHangarDoors();
+                }
+
+                foreach (IMyAirtightHangarDoor door in airlockBlocks)
+                {
+                    Echo(door.OpenRatio.ToString());
+                    Echo(door.Closed ? "closed" : "open");
+                    Echo(door.Status.ToString());
+                }
+            } else if (updateSource == UpdateType.Update100)
+            {
+                if (airlockBlocks.TrueForAll(door => door.OpenRatio >= 0.6f && door.Status == DoorStatus.Opening))
+                {
+                    foreach (IMyAirtightHangarDoor door in airlockBlocks)
+                    {
+                        door.Enabled = false;
+                    }
+                }
+            }
+        }
+
+        private void CloseHangarDoors()
+        {
+            foreach (IMyAirtightHangarDoor hangarDoor in airlockBlocks)
+            {
+                hangarDoor.Enabled = true;
+                hangarDoor.CloseDoor();
+            }
+        }
+
+        private void OpenHangarDoors()
+        {
+            foreach (IMyAirtightHangarDoor hangarDoor in airlockBlocks)
+            {
+                hangarDoor.OpenDoor();
+            }
         }
     }
 }
