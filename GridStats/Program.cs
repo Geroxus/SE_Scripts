@@ -31,11 +31,9 @@ namespace IngameScript
 
         List<IMyGasTank> myGasTanks = new List<IMyGasTank>();
 
-        IMyTextSurface mySurface;
-
         MyCommandLine _commandLine = new MyCommandLine();
-        List<string> textSurfaceNameList = new List<string>();
-        List<IMyTextSurface> textSurfaceList = new List<IMyTextSurface>();
+        
+        private List<IMyTextSurface> _textSurfaces = new List<IMyTextSurface>();
 
         public Program()
         {
@@ -49,8 +47,7 @@ namespace IngameScript
             myPowerProducers = myPowerProducers.Where(block => !(block is IMyBatteryBlock) && block.IsSameConstructAs(Me)).ToList();
             myGasTanks = myGasTanks.Where(block => block.DisplayNameText.Contains("Hydrogen") && block.IsSameConstructAs(Me)).ToList();
 
-            mySurface = Me.GetSurface(0) as IMyTextSurface;
-            mySurface.ContentType = ContentType.TEXT_AND_IMAGE;
+            CollectTextSurfaces("GridStats");
 
             foreach (IMyBatteryBlock block in myBatteries)
             {
@@ -73,31 +70,6 @@ namespace IngameScript
         {
             StringBuilder debug = new StringBuilder();
             StringBuilder output = new StringBuilder();
-
-            if (_commandLine.TryParse(argument))
-            {
-                for (int i = 0; i < _commandLine.ArgumentCount; i++)
-                {
-                    string name = _commandLine.Argument(i);
-                    if (!textSurfaceNameList.Contains(name))
-                    {
-                        IMyTextSurfaceProvider block = GridTerminalSystem.GetBlockWithName(name) as IMyTextSurfaceProvider;
-                        IMyTextSurface surface = block.GetSurface(0);
-                        surface.ContentType = ContentType.TEXT_AND_IMAGE;
-                        surface.Font = "Green";
-                        textSurfaceList.Add(surface);
-                    }
-                }
-            }
-            if (textSurfaceList.Count > 0)
-            {
-                debug.Append("Text Surfaces Found:");
-                foreach (IMyTextSurface surface in textSurfaceList)
-                {
-                    debug.Append(surface.Name);
-                }
-            }
-
 
             /*
              * Batteries
@@ -170,16 +142,41 @@ namespace IngameScript
             double currentHydroFillPercent = currentHydroFillAcummulated / myGasTanks.Count;
             output.AppendLine($"Hydrogen Fill status: {Math.Round(currentHydroFillPercent, 2)}%");
 
-            writeTextToSurfaces(output.ToString());
+            WriteTextToSurfaces(output.ToString());
             Echo(debug.ToString());
         }
-
-        private void writeTextToSurfaces(String output)
+        private void CollectTextSurfaces(string controlSurfaceName)
         {
-            mySurface.WriteText(output.ToString());
-            foreach (IMyTextSurface surface in textSurfaceList)
+            _textSurfaces.RemoveAll(_ => true);
+            
+            _textSurfaces.Add(Me.GetSurface(0));
+            
+            List<IMyTextSurfaceProvider> textSurfaceProviders = new List<IMyTextSurfaceProvider>();
+            GridTerminalSystem.GetBlocksOfType<IMyTextSurfaceProvider>(textSurfaceProviders);
+            foreach (IMyTextSurfaceProvider textSurfaceProvider in textSurfaceProviders)
             {
-                surface.WriteText(output);
+                var myTerminalBlock = textSurfaceProvider as IMyTerminalBlock;
+                if (myTerminalBlock != null && myTerminalBlock.CustomData.Contains(controlSurfaceName))
+                {
+                    foreach (string dataLine in myTerminalBlock.CustomData.Split('\n'))
+                    {
+                        if (dataLine.StartsWith(controlSurfaceName))
+                        {
+                            int index = Convert.ToInt32(dataLine.Split(':')[1].Trim());
+                            _textSurfaces.Add(textSurfaceProvider.GetSurface(index));
+                        }
+                    }
+                }
+            }
+        }
+
+        private void WriteTextToSurfaces(String output)
+        {
+            foreach (IMyTextSurface surface in _textSurfaces)
+            {
+                surface.ContentType = ContentType.TEXT_AND_IMAGE;
+                surface.Font = "Green";
+                surface.WriteText(output.ToString());
             }
         }
     }
