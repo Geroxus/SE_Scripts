@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pressurized Hidden Connector", "Pressurized Hidden Connector\Pressurized Hidden Connector.csproj", "{B21B613D-F3F6-409C-AB01-E7DCDF38FC22}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GridStats", "GridStats\GridStats.csproj", "{6050E7F8-D4F0-4A98-923F-E7BB061AFD24}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -12,5 +14,9 @@ Global
 		{B21B613D-F3F6-409C-AB01-E7DCDF38FC22}.Debug|x64.Build.0 = Debug|x64
 		{B21B613D-F3F6-409C-AB01-E7DCDF38FC22}.Release|x64.ActiveCfg = Release|x64
 		{B21B613D-F3F6-409C-AB01-E7DCDF38FC22}.Release|x64.Build.0 = Release|x64
+		{6050E7F8-D4F0-4A98-923F-E7BB061AFD24}.Debug|x64.ActiveCfg = Debug|x64
+		{6050E7F8-D4F0-4A98-923F-E7BB061AFD24}.Debug|x64.Build.0 = Debug|x64
+		{6050E7F8-D4F0-4A98-923F-E7BB061AFD24}.Release|x64.ActiveCfg = Release|x64
+		{6050E7F8-D4F0-4A98-923F-E7BB061AFD24}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 EndGlobal
