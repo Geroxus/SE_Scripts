@@ -22,8 +22,9 @@ namespace IngameScript
 {
     partial class Program : MyGridProgram
     {
-        IMyPistonBase piston = null;
-        List<IMyAirtightHangarDoor> airlockBlocks = new List<IMyAirtightHangarDoor>();
+        private static readonly float OpenRatio = 0.6f;
+        IMyPistonBase _piston = null;
+        List<IMyAirtightHangarDoor> _airlockBlocks = new List<IMyAirtightHangarDoor>();
         MyCommandLine _commandLine = new MyCommandLine();
 
         public Program()
@@ -47,28 +48,28 @@ namespace IngameScript
             {
                 if (_commandLine.TryParse(argument))
                 {
-                    piston = GridTerminalSystem.GetBlockWithName(_commandLine.Argument(0)) as IMyPistonBase;
-                    GridTerminalSystem.GetBlockGroupWithName(_commandLine.Argument(1)).GetBlocksOfType(airlockBlocks);
+                    _piston = GridTerminalSystem.GetBlockWithName(_commandLine.Argument(0)) as IMyPistonBase;
+                    GridTerminalSystem.GetBlockGroupWithName(_commandLine.Argument(1)).GetBlocksOfType(_airlockBlocks);
                 }
 
-                if (piston == null || airlockBlocks.Count == 0)
+                if (_piston == null || _airlockBlocks.Count == 0)
                 {
                     Echo("Please enter a valid piston or airlock block group");
                     return;
                 }
 
-                if (airlockBlocks.TrueForAll(door => door.Status == DoorStatus.Closed))
+                if (_airlockBlocks.TrueForAll(door => door.Status == DoorStatus.Closed))
                 {
                     Echo("The airlock block group is closed");
                     OpenHangarDoors();
                 }
-                else if (airlockBlocks.TrueForAll(door => door.Status != DoorStatus.Closed))
+                else if (_airlockBlocks.TrueForAll(door => door.Status != DoorStatus.Closed))
                 {
                     Echo("The airlock block group is open");
                     CloseHangarDoors();
                 }
 
-                foreach (IMyAirtightHangarDoor door in airlockBlocks)
+                foreach (IMyAirtightHangarDoor door in _airlockBlocks)
                 {
                     Echo(door.OpenRatio.ToString());
                     Echo(door.Closed ? "closed" : "open");
@@ -76,9 +77,9 @@ namespace IngameScript
                 }
             } else if (updateSource == UpdateType.Update100)
             {
-                if (airlockBlocks.TrueForAll(door => door.OpenRatio >= 0.6f && door.Status == DoorStatus.Opening))
+                if (_airlockBlocks.TrueForAll(door => door.OpenRatio >= OpenRatio && door.Status == DoorStatus.Opening))
                 {
-                    foreach (IMyAirtightHangarDoor door in airlockBlocks)
+                    foreach (IMyAirtightHangarDoor door in _airlockBlocks)
                     {
                         door.Enabled = false;
                     }
@@ -88,7 +89,7 @@ namespace IngameScript
 
         private void CloseHangarDoors()
         {
-            foreach (IMyAirtightHangarDoor hangarDoor in airlockBlocks)
+            foreach (IMyAirtightHangarDoor hangarDoor in _airlockBlocks)
             {
                 hangarDoor.Enabled = true;
                 hangarDoor.CloseDoor();
@@ -97,7 +98,7 @@ namespace IngameScript
 
         private void OpenHangarDoors()
         {
-            foreach (IMyAirtightHangarDoor hangarDoor in airlockBlocks)
+            foreach (IMyAirtightHangarDoor hangarDoor in _airlockBlocks)
             {
                 hangarDoor.OpenDoor();
             }
