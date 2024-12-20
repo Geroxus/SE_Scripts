@@ -23,4 +23,5 @@
         <AdditionalFiles Include="Instructions.readme"/>
         <AdditionalFiles Include="thumb.png"/>
     </ItemGroup>
+    <Import Project="..\Logger\Logger.projitems" Label="Shared" />
 </Project>

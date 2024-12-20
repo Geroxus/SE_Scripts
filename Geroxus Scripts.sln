@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GridStats", "GridStats\Grid
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GridManager", "GridManager\GridManager.csproj", "{7B464795-4D60-4281-963B-E2868B6C96E4}"
 EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Logger", "Logger\Logger.shproj", "{8A3CDCC5-4B55-4D87-A415-698A0E1FF06F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64

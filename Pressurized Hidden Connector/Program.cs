@@ -25,6 +25,7 @@ namespace IngameScript
         private const float OpenRatio = 0.6f;
 
         private State _state = State.TowardsClose;
+        private Logger _logger;
 
         IMyPistonBase _piston = null;
         IMyDoor _door = null;
@@ -36,33 +37,8 @@ namespace IngameScript
         public Program()
         {
             Runtime.UpdateFrequency = UpdateFrequency.Update100;
-            
-            CollectTextSurfaces("PistonControlScreen");
-        }
-
-        private void CollectTextSurfaces(string controlSurfaceName)
-        {
-            _textSurfaces.RemoveAll(_ => true);
-            
-            _textSurfaces.Add(Me.GetSurface(0));
-            
-            List<IMyTextSurfaceProvider> textSurfaceProviders = new List<IMyTextSurfaceProvider>();
-            GridTerminalSystem.GetBlocksOfType<IMyTextSurfaceProvider>(textSurfaceProviders);
-            foreach (IMyTextSurfaceProvider textSurfaceProvider in textSurfaceProviders)
-            {
-                var myTerminalBlock = textSurfaceProvider as IMyTerminalBlock;
-                if (myTerminalBlock != null && myTerminalBlock.CustomData.Contains(controlSurfaceName))
-                {
-                    foreach (string dataLine in myTerminalBlock.CustomData.Split('\n'))
-                    {
-                        if (dataLine.StartsWith(controlSurfaceName))
-                        {
-                            int index = Convert.ToInt32(dataLine.Split(':')[1].Trim());
-                            _textSurfaces.Add(textSurfaceProvider.GetSurface(index));
-                        }
-                    }
-                }
-            }
+            _logger = new Logger(me: Me, terminalSystem: GridTerminalSystem);
+            _logger.CollectTextSurfaces("PistonControlScreen");
         }
 
         public void Save()
@@ -79,9 +55,9 @@ namespace IngameScript
         {
             StringBuilder debug = new StringBuilder();
 
-            debug.Append("State: ").AppendLine(_state.ToString());
-            debug.Append("piston: ").AppendLine(_piston != null ? _piston.DisplayNameText : "-");
-            debug.Append("airlock: ").AppendLine(_airlockBlocks.Count.ToString());
+            _logger.Log("State: ").Log(_state.ToString(), true);
+            _logger.Log("piston: ").Log(_piston != null ? _piston.DisplayNameText : "-", true);
+            _logger.Log("airlock: ").Log(_airlockBlocks.Count.ToString(), true);
             if (updateSource == UpdateType.Trigger)
             {
                 switch (_state)
@@ -93,7 +69,8 @@ namespace IngameScript
                         _state = State.TowardsClose;
                         break;
                 }
-                StatusCheck(debug);
+
+                StatusCheck();
                 ToggleHangarDoors();
             }
             else if (updateSource == UpdateType.Terminal)
@@ -108,22 +85,22 @@ namespace IngameScript
 
                 if (_piston == null || _door == null || _airlockBlocks.Count == 0)
                 {
-                    debug.AppendLine("Please enter a valid piston, door and airlock block group");
-                    WriteOutput(debug);
+                    _logger.Log("Please enter a valid piston, door and airlock block group", true);
+                    _logger.WriteOutput();
                     return;
                 }
 
-                StatusCheck(debug);
+                StatusCheck();
             }
             else if (updateSource == UpdateType.Update100 && _airlockBlocks.Count > 0 && _piston != null)
             {
                 ToggleDoor();
                 ToggleHangarDoors();
                 TogglePiston();
-                StatusCheck(debug);
+                StatusCheck();
             }
 
-            WriteOutput(debug);
+            _logger.WriteOutput();
         }
 
         private void ToggleDoor()
@@ -140,6 +117,7 @@ namespace IngameScript
                         _door.Enabled = true;
                         _door.OpenDoor();
                     }
+
                     break;
             }
         }
@@ -172,6 +150,7 @@ namespace IngameScript
                             hangarDoor.CloseDoor();
                         }
                     }
+
                     break;
                 case State.TowardsOpen:
                 {
@@ -181,38 +160,28 @@ namespace IngameScript
                         hangarDoor.OpenDoor();
                         if (hangarDoor.OpenRatio >= OpenRatio) hangarDoor.Enabled = false;
                     }
+
                     break;
                 }
             }
         }
 
-        private void StatusCheck(StringBuilder output)
+        private void StatusCheck()
         {
             foreach (IMyAirtightHangarDoor door in _airlockBlocks)
             {
-                output.Append(door.DisplayNameText)
-                    .Append(": ")
-                    .Append(Math.Round(door.OpenRatio, 2).ToString())
-                    .Append(" | ")
-                    .AppendLine(door.Status.ToString());
+                _logger.Log(door.DisplayNameText)
+                    .Log(": ")
+                    .Log(Math.Round(door.OpenRatio, 2).ToString())
+                    .Log(" | ")
+                    .Log(door.Status.ToString(), true);
             }
 
-            output.Append("Piston: ")
-                .AppendLine(_piston.Status.ToString());
-            
-            output.Append("Door: ")
-                .AppendLine(_door.Status.ToString());
-        }
+            _logger.Log("Piston: ")
+                .Log(_piston.Status.ToString(), true);
 
-        private void WriteOutput(StringBuilder output)
-        {
-            Echo(output.ToString());
-            foreach (IMyTextSurface surface in _textSurfaces)
-            {
-                surface.ContentType = ContentType.TEXT_AND_IMAGE;
-                surface.Font = "Green";
-                surface.WriteText(output.ToString());
-            }
+            _logger.Log("Door: ")
+                .Log(_door.Status.ToString(), true);
         }
 
         enum State
