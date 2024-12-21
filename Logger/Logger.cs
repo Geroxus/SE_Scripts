@@ -78,5 +78,11 @@ namespace IngameScript
 
             _output.Clear();
         }
+
+        public void WriteOutput(Action<string> action)
+        {
+            action(_output.ToString());
+            WriteOutput();
+        }
     }
 }
