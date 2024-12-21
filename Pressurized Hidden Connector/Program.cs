@@ -24,11 +24,12 @@ namespace IngameScript
     {
         private const float OpenRatio = 0.6f;
 
-        private State _state = State.TowardsClose;
+        private State _state = State.Close;
         private readonly Logger _logger;
 
         private IMyPistonBase _piston = null;
         private IMyDoor _door = null;
+        private IMyShipConnector _connector = null;
         private readonly List<IMyAirtightHangarDoor> _airlockBlocks = new List<IMyAirtightHangarDoor>();
         private readonly MyCommandLine _commandLine = new MyCommandLine();
 
@@ -55,18 +56,15 @@ namespace IngameScript
         {
             StringBuilder debug = new StringBuilder();
 
-            _logger.Log("State: ").Log(_state.ToString(), true);
-            _logger.Log("piston: ").Log(_piston != null ? _piston.DisplayNameText : "-", true);
-            _logger.Log("airlock: ").Log(_airlockBlocks.Count.ToString(), true);
             if (updateSource == UpdateType.Trigger)
             {
                 switch (_state)
                 {
-                    case State.TowardsClose:
-                        _state = State.TowardsOpen;
+                    case State.Close:
+                        _state = State.Open;
                         break;
-                    case State.TowardsOpen:
-                        _state = State.TowardsClose;
+                    case State.Open:
+                        _state = State.Close;
                         break;
                 }
 
@@ -81,6 +79,7 @@ namespace IngameScript
                     _piston = GridTerminalSystem.GetBlockWithName(_commandLine.Argument(0)) as IMyPistonBase;
                     GridTerminalSystem.GetBlockGroupWithName(_commandLine.Argument(1)).GetBlocksOfType(_airlockBlocks);
                     _door = GridTerminalSystem.GetBlockWithName(_commandLine.Argument(2)) as IMyDoor;
+                    _connector = GridTerminalSystem.GetBlockWithName(_commandLine.Argument(3)) as IMyShipConnector;
 
                     GridTerminalSystem.GetBlocksOfType(_warningLights,
                         light => light.DisplayNameText.Contains("Piston Warning"));
@@ -110,7 +109,7 @@ namespace IngameScript
 
         private void UpdateLights()
         {
-            if (State.TowardsOpen == _state)
+            if (State.Open == _state)
             {
                 foreach (IMyReflectorLight light in _warningLights)
                 {
@@ -118,7 +117,7 @@ namespace IngameScript
                     light.Color = Color.OrangeRed;
                     light.GetProperty("RotationSpeed").As<Single>().SetValue(light, 15);
                 }
-            } else if (State.TowardsClose == _state && _piston.Status == PistonStatus.Retracted )
+            } else if (State.Close == _state && _piston.Status == PistonStatus.Retracted )
             {
                 foreach (IMyReflectorLight light in _warningLights)
                 {
@@ -131,11 +130,11 @@ namespace IngameScript
         {
             switch (_state)
             {
-                case State.TowardsOpen:
+                case State.Open:
                     _door.CloseDoor();
                     if (_door.Status == DoorStatus.Closed) _door.Enabled = false;
                     break;
-                case State.TowardsClose:
+                case State.Close:
                     if (_airlockBlocks.TrueForAll(door => door.Status == DoorStatus.Closed))
                     {
                         _door.Enabled = true;
@@ -150,12 +149,12 @@ namespace IngameScript
         {
             switch (_state)
             {
-                case State.TowardsOpen:
+                case State.Open:
                     bool doorsInRestrictedOpenState = _airlockBlocks.TrueForAll(door =>
                         door.OpenRatio >= OpenRatio && door.Status == DoorStatus.Opening);
                     if (doorsInRestrictedOpenState) _piston.Extend();
                     break;
-                case State.TowardsClose:
+                case State.Close:
                     _piston.Retract();
                     break;
             }
@@ -165,7 +164,7 @@ namespace IngameScript
         {
             switch (_state)
             {
-                case State.TowardsClose:
+                case State.Close:
                     if (_piston.Status == PistonStatus.Retracted)
                     {
                         foreach (IMyAirtightHangarDoor hangarDoor in _airlockBlocks)
@@ -176,7 +175,7 @@ namespace IngameScript
                     }
 
                     break;
-                case State.TowardsOpen:
+                case State.Open:
                 {
                     if (_door.Status != DoorStatus.Closed) break;
                     foreach (IMyAirtightHangarDoor hangarDoor in _airlockBlocks)
@@ -192,26 +191,28 @@ namespace IngameScript
 
         private void StatusCheck()
         {
-            foreach (IMyAirtightHangarDoor door in _airlockBlocks)
-            {
-                _logger.Log(door.DisplayNameText)
-                    .Log(": ")
-                    .Log(Math.Round(door.OpenRatio, 2).ToString())
-                    .Log(" | ")
-                    .Log(door.Status.ToString(), true);
-            }
-
-            _logger.Log("Piston: ")
-                .Log(_piston.Status.ToString(), true);
-
+            _logger.Log("State: ")
+                .Log(_state.ToString(), true);
+            
             _logger.Log("Door: ")
                 .Log(_door.Status.ToString(), true);
+
+            _logger.Log("Airlock: ")
+                .Log(_airlockBlocks.TrueForAll(door => door.OpenRatio >= OpenRatio) ? "Open   (" : "Closed (")
+                .Log(Math.Round(_airlockBlocks.Sum(door => door.OpenRatio) / _airlockBlocks.Count, 2).ToString())
+                .Log(")", true);
+            
+            _logger.Log("Piston: ")
+                .Log(_piston.Status.ToString(), true);
+            
+            _logger.Log("Connector: ")
+                .Log(_connector.Status.ToString(), true);
         }
 
         enum State
         {
-            TowardsOpen,
-            TowardsClose
+            Open,
+            Close
         }
     }
 }
