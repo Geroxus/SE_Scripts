@@ -155,6 +155,7 @@ namespace IngameScript
                     if (doorsInRestrictedOpenState) _piston.Extend();
                     break;
                 case State.Close:
+                    if (_connector.IsConnected) break;
                     _piston.Retract();
                     break;
             }
