@@ -25,14 +25,14 @@ namespace IngameScript
         private const float OpenRatio = 0.6f;
 
         private State _state = State.TowardsClose;
-        private Logger _logger;
+        private readonly Logger _logger;
 
-        IMyPistonBase _piston = null;
-        IMyDoor _door = null;
-        List<IMyAirtightHangarDoor> _airlockBlocks = new List<IMyAirtightHangarDoor>();
-        MyCommandLine _commandLine = new MyCommandLine();
+        private IMyPistonBase _piston = null;
+        private IMyDoor _door = null;
+        private readonly List<IMyAirtightHangarDoor> _airlockBlocks = new List<IMyAirtightHangarDoor>();
+        private readonly MyCommandLine _commandLine = new MyCommandLine();
 
-        List<IMyTextSurface> _textSurfaces = new List<IMyTextSurface>();
+        private readonly List<IMyReflectorLight> _warningLights = new List<IMyReflectorLight>();
 
         public Program()
         {
@@ -71,7 +71,7 @@ namespace IngameScript
                 }
 
                 StatusCheck();
-                ToggleHangarDoors();
+                UpdateHangarDoors();
             }
             else if (updateSource == UpdateType.Terminal)
             {
@@ -81,6 +81,9 @@ namespace IngameScript
                     _piston = GridTerminalSystem.GetBlockWithName(_commandLine.Argument(0)) as IMyPistonBase;
                     GridTerminalSystem.GetBlockGroupWithName(_commandLine.Argument(1)).GetBlocksOfType(_airlockBlocks);
                     _door = GridTerminalSystem.GetBlockWithName(_commandLine.Argument(2)) as IMyDoor;
+
+                    GridTerminalSystem.GetBlocksOfType(_warningLights,
+                        light => light.DisplayNameText.Contains("Piston Warning"));
                 }
 
                 if (_piston == null || _door == null || _airlockBlocks.Count == 0)
@@ -94,16 +97,37 @@ namespace IngameScript
             }
             else if (updateSource == UpdateType.Update100 && _airlockBlocks.Count > 0 && _piston != null)
             {
-                ToggleDoor();
-                ToggleHangarDoors();
-                TogglePiston();
+                UpdateDoor();
+                UpdateHangarDoors();
+                UpdatePiston();
+                UpdateLights();
+
                 StatusCheck();
             }
 
             _logger.WriteOutput();
         }
 
-        private void ToggleDoor()
+        private void UpdateLights()
+        {
+            if (State.TowardsOpen == _state)
+            {
+                foreach (IMyReflectorLight light in _warningLights)
+                {
+                    light.Enabled = true;
+                    light.Color = Color.OrangeRed;
+                    light.GetProperty("RotationSpeed").As<Single>().SetValue(light, 15);
+                }
+            } else if (State.TowardsClose == _state && _piston.Status == PistonStatus.Retracted )
+            {
+                foreach (IMyReflectorLight light in _warningLights)
+                {
+                    light.Enabled = false;
+                }
+            }
+        }
+
+        private void UpdateDoor()
         {
             switch (_state)
             {
@@ -122,7 +146,7 @@ namespace IngameScript
             }
         }
 
-        private void TogglePiston()
+        private void UpdatePiston()
         {
             switch (_state)
             {
@@ -137,7 +161,7 @@ namespace IngameScript
             }
         }
 
-        private void ToggleHangarDoors()
+        private void UpdateHangarDoors()
         {
             switch (_state)
             {
