@@ -27,6 +27,8 @@ namespace IngameScript
         private readonly IMyShipController _bridge;
         private IMyDoor _door;
 
+        private double _lastSpeed;
+
         public Program()
         {
             Runtime.UpdateFrequency = UpdateFrequency.Update100;
@@ -65,7 +67,23 @@ namespace IngameScript
                 _logger.Log("Bridge is not controlled", true);
                 OpenBridge();
             }
+            DisplayFlightInformation();
             _logger.WriteOutput();
+        }
+
+        private void DisplayFlightInformation()
+        {
+            double speed = Math.Round(_bridge.GetShipSpeed(), 2);
+            double acceleration = speed - _lastSpeed;
+            _lastSpeed = speed;
+            
+            _logger.Log("Speed: ")
+                .Log(speed.ToString(), true);
+            // _bridge.MoveIndicator.ToString()
+            _logger.Log("Acceleration: ")
+                .Log(acceleration.ToString(), true);
+            _logger.Log("Dampeners: ")
+                .Log(_bridge.DampenersOverride.ToString(), true);
         }
 
         private void OpenBridge()
