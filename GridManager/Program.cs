@@ -22,13 +22,14 @@ namespace IngameScript
         private readonly List<IMyThrust> _forwardThrusters = new List<IMyThrust>();
         private readonly List<IMyThrust> _reverseThrusters = new List<IMyThrust>();
         private readonly List<IMyInteriorLight> _lights = new List<IMyInteriorLight>();
+        private readonly List<IMyAdvancedDoor> _advancedDoors = new List<IMyAdvancedDoor>();
 
         public Program()
         {
             Runtime.UpdateFrequency = UpdateFrequency.Update100;
             
             _logger = new Logger(Me, GridTerminalSystem);
-            _logger.CollectTextSurfaces("GridManager");
+            _logger.CollectTextSurfaces("GridManager", "HangarControl");
 
             List<IMyShipController> shipControllers = new List<IMyShipController>();
             GridTerminalSystem.GetBlocksOfType(shipControllers);
@@ -93,7 +94,16 @@ namespace IngameScript
 
             UpdateLights();
             DisplayInteriorInformation();
+
+            DisplayHangarInformation();
             _logger.WriteOutput();
+        }
+
+        private void DisplayHangarInformation()
+        {
+            const string controlSurfaceName = "HangarControl";
+            _logger.Log("Hangar Information", true, controlSurfaceName)
+                .Log(_advancedDoors.Count.ToString(), true, controlSurfaceName);
         }
 
         private void UpdateLights()

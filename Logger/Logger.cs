@@ -17,6 +17,7 @@ using VRage.Game.ModAPI.Ingame;
 using VRage.Game.ModAPI.Ingame.Utilities;
 using VRage.Game.ObjectBuilders.Definitions;
 using VRageMath;
+using VRageRender;
 
 namespace IngameScript
 {
@@ -24,9 +25,13 @@ namespace IngameScript
     {
         private readonly IMyProgrammableBlock _me;
         private readonly IMyGridTerminalSystem _gridTerminalSystem;
-        private readonly List<IMyTextSurface> _textSurfaces = new List<IMyTextSurface>();
         private readonly string _font;
-        private readonly StringBuilder _output = new StringBuilder();
+
+        private readonly Dictionary<string, List<IMyTextSurface>> _textSurfaces =
+            new Dictionary<string, List<IMyTextSurface>>();
+
+        private readonly Dictionary<string, StringBuilder> _outputs = new Dictionary<string, StringBuilder>();
+        private string _defaultControlSurfaceName;
 
         public Logger(IMyProgrammableBlock me, IMyGridTerminalSystem terminalSystem, string font = "Green")
         {
@@ -35,54 +40,62 @@ namespace IngameScript
             _font = font;
         }
 
-        public void CollectTextSurfaces(string controlSurfaceName)
+        public void CollectTextSurfaces(params string[] controlSurfaceNames)
         {
-            _textSurfaces.RemoveAll(_ => true);
+            if (controlSurfaceNames.Length == 0) throw new ArgumentException("No control surfaces defined.");
 
-            _textSurfaces.Add(_me.GetSurface(0));
+            _textSurfaces.Clear();
+
+            _defaultControlSurfaceName = controlSurfaceNames[0];
+            foreach (string controlSurfaceName in controlSurfaceNames)
+            {
+                _textSurfaces[controlSurfaceName] = new List<IMyTextSurface>();
+                _outputs.Add(controlSurfaceName, new StringBuilder());
+            }
+
+            _textSurfaces[_defaultControlSurfaceName].Add(_me.GetSurface(0));
 
             List<IMyTextSurfaceProvider> textSurfaceProviders = new List<IMyTextSurfaceProvider>();
             _gridTerminalSystem.GetBlocksOfType<IMyTextSurfaceProvider>(textSurfaceProviders);
             foreach (IMyTextSurfaceProvider textSurfaceProvider in textSurfaceProviders)
             {
-                var myTerminalBlock = textSurfaceProvider as IMyTerminalBlock;
-                if (myTerminalBlock != null && myTerminalBlock.CustomData.Contains(controlSurfaceName))
+                foreach (string controlSurfaceName in controlSurfaceNames)
                 {
+                    var myTerminalBlock = textSurfaceProvider as IMyTerminalBlock;
+                    if (myTerminalBlock == null || !myTerminalBlock.CustomData.Contains(controlSurfaceName)) continue;
                     foreach (string dataLine in myTerminalBlock.CustomData.Split('\n'))
                     {
-                        if (dataLine.StartsWith(controlSurfaceName))
-                        {
-                            int index = Convert.ToInt32(dataLine.Split(':')[1].Trim());
-                            _textSurfaces.Add(textSurfaceProvider.GetSurface(index));
-                        }
+                        if (!dataLine.StartsWith(controlSurfaceName)) continue;
+                        int index = Convert.ToInt32(dataLine.Split(':')[1].Trim());
+                        _textSurfaces[controlSurfaceName].Add(textSurfaceProvider.GetSurface(index));
                     }
                 }
             }
         }
 
-        public Logger Log(string content, bool newLine = false)
+        public Logger Log(string content, bool newLine = false, string controlSurfaceName = null)
         {
-            _output.Append(content);
-            if (newLine) _output.Append('\n');
+            if (_defaultControlSurfaceName == null) throw new ArgumentNullException(nameof(_defaultControlSurfaceName));
+            if (controlSurfaceName == null) controlSurfaceName = _defaultControlSurfaceName;
+
+            _outputs[controlSurfaceName].Append(content);
+            if (newLine) _outputs[controlSurfaceName].Append('\n');
             return this;
         }
-        
+
         public void WriteOutput()
         {
-            foreach (IMyTextSurface surface in _textSurfaces)
+            foreach (string controlSurfaceName in _outputs.Keys)
             {
-                surface.ContentType = ContentType.TEXT_AND_IMAGE;
-                surface.Font = _font;
-                surface.WriteText(_output.ToString());
+                foreach (IMyTextSurface surface in _textSurfaces[controlSurfaceName])
+                {
+                    surface.ContentType = ContentType.TEXT_AND_IMAGE;
+                    surface.Font = _font;
+                    surface.WriteText(_outputs[controlSurfaceName].ToString());
+                }
+
+                _outputs[controlSurfaceName].Clear();
             }
-
-            _output.Clear();
-        }
-
-        public void WriteOutput(Action<string> action)
-        {
-            action(_output.ToString());
-            WriteOutput();
         }
     }
 }
