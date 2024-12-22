@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Sandbox.ModAPI.Ingame;
 using SpaceEngineers.Game.ModAPI.Ingame;
 using VRageMath;
@@ -42,6 +43,15 @@ namespace IngameScript
             
             _connector = GridTerminalSystem.GetBlockWithName("Connector") as IMyShipConnector;
 
+            List<IMyGravityGenerator> allGravGenerators = new List<IMyGravityGenerator>();
+            GridTerminalSystem.GetBlocksOfType(allGravGenerators);
+            IMyGravityGenerator gravityGenerator = allGravGenerators.First();
+
+            Vector3I gridV = Me.CubeGrid.Max - Me.CubeGrid.Min;
+            float width = gridV.Y * 3;
+            float height = gridV.Z * 3;
+            float depth = gridV.X * 3;
+            gravityGenerator.FieldSize = new Vector3(width, height, depth);
             
             GridTerminalSystem.GetBlocksOfType(_lights);
         }
