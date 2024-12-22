@@ -24,4 +24,5 @@
         <AdditionalFiles Include="thumb.png"/>
     </ItemGroup>
     <Import Project="..\Logger\Logger.projitems" Label="Shared" />
+    <Import Project="..\Utility\Utility.projitems" Label="Shared" />
 </Project>
