@@ -105,6 +105,13 @@ namespace IngameScript
                     light.Color = Color.LightGoldenrodYellow;
                 }
             }
+            else if (_bridge.IsUnderControl)
+            {
+                foreach (IMyInteriorLight light in _lights)
+                {
+                    light.Color = Color.LightCyan;
+                }
+            }
             else
             {
                 foreach (IMyInteriorLight light in _lights)
