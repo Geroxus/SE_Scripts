@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Sandbox.ModAPI.Ingame;
+using SpaceEngineers.Game.ModAPI.Ingame;
 using VRageMath;
 
 namespace IngameScript
@@ -10,14 +11,16 @@ namespace IngameScript
         private readonly Logger _logger;
 
         private readonly IMyShipController _bridge;
-        private IMyDoor _door;
+        private readonly IMyDoor _door;
+        private readonly IMyShipConnector _connector;
 
         private double _lastSpeed;
-        
-        private readonly Commander<IMyShipController> _bridgeCommander;
+
+        private readonly Commander _commander = new Commander();
         private int _targetVelocity;
         private readonly List<IMyThrust> _forwardThrusters = new List<IMyThrust>();
         private readonly List<IMyThrust> _reverseThrusters = new List<IMyThrust>();
+        private readonly List<IMyInteriorLight> _lights = new List<IMyInteriorLight>();
 
         public Program()
         {
@@ -37,7 +40,10 @@ namespace IngameScript
             GridTerminalSystem.GetBlocksOfType(_forwardThrusters, tr => _bridge.Orientation.TransformDirection(tr.Orientation.Forward) == Base6Directions.Direction.Forward);
             GridTerminalSystem.GetBlocksOfType(_reverseThrusters, tr => _bridge.Orientation.TransformDirection(tr.Orientation.Forward) == Base6Directions.Direction.Backward);
             
-            _bridgeCommander = new Commander<IMyShipController>(_bridge);
+            _connector = GridTerminalSystem.GetBlockWithName("Connector") as IMyShipConnector;
+
+            
+            GridTerminalSystem.GetBlocksOfType(_lights);
         }
 
         public void Save()
@@ -65,15 +71,42 @@ namespace IngameScript
                 OpenBridge();
                 
                 // Can only execute these commands, when bridge is not controlled
-                _bridgeCommander.Read(argument)
-                    .Command("dampeners", c => c.DampenersOverride = !c.DampenersOverride)
-                    .Command("speedUp", _ => _targetVelocity += 10)
-                    .Command("speedDown", _ => _targetVelocity -= 10);
+                _commander.Read(argument)
+                    .Command("connector", () => _connector.ToggleConnect())
+                    .Command("dampeners", () => _bridge.DampenersOverride = !_bridge.DampenersOverride)
+                    .Command("speedUp", () => _targetVelocity += 10)
+                    .Command("speedDown", () => _targetVelocity -= 10);
 
                 UpdateSpeed();
             }
             DisplayFlightInformation();
+
+            UpdateLights();
+            DisplayInteriorInformation();
             _logger.WriteOutput();
+        }
+
+        private void UpdateLights()
+        {
+            if (_connector.Status == MyShipConnectorStatus.Connected)
+            {
+                foreach (IMyInteriorLight light in _lights)
+                {
+                    light.Color = Color.LightGoldenrodYellow;
+                }
+            }
+            else
+            {
+                foreach (IMyInteriorLight light in _lights)
+                {
+                    light.Color = Color.White;
+                }
+            }
+        }
+
+        private void DisplayInteriorInformation()
+        {
+            _logger.Log(_lights.Count.ToString(), true);
         }
 
         private void UpdateSpeed()

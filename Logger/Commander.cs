@@ -5,27 +5,23 @@ using VRage.Game.ModAPI.Ingame.Utilities;
 
 namespace IngameScript
 {
-    public class Commander<T> where T : IMyTerminalBlock
+    public class Commander
     {
         private bool _parsed;
-        private readonly T _entity;
         private readonly MyCommandLine _commandLine = new MyCommandLine();
 
-        public Commander(T entity)
+        public Commander()
         {
-            if (entity == null) throw new ArgumentNullException(nameof(entity));
-            _entity = entity;
         }
 
-        public Commander<T> Read(string arguments)
+        public Commander Read(string arguments)
         {
             _parsed = _commandLine.TryParse(arguments);
             return this;
         }
-        
-        public Commander<T> Command(string flag, Action<T> action)
+        public Commander Command(string flag, Action action)
         {
-            if (_parsed && _commandLine.Switches.Contains(flag)) action(_entity);
+            if (_parsed && _commandLine.Switches.Contains(flag)) action();
             return this;
         }
     }

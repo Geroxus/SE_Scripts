@@ -109,7 +109,7 @@ namespace IngameScript
 
         private void UpdateLights()
         {
-            if (State.Open == _state)
+            if (State.Open == _state && _connector.Status != MyShipConnectorStatus.Connected)
             {
                 foreach (IMyReflectorLight light in _warningLights)
                 {
@@ -117,7 +117,9 @@ namespace IngameScript
                     light.Color = Color.OrangeRed;
                     light.GetProperty("RotationSpeed").As<Single>().SetValue(light, 15);
                 }
-            } else if (State.Close == _state && _piston.Status == PistonStatus.Retracted )
+            } 
+            else if ((State.Close == _state && _piston.Status == PistonStatus.Retracted) || 
+                     (State.Open == _state && _connector.Status == MyShipConnectorStatus.Connected ))
             {
                 foreach (IMyReflectorLight light in _warningLights)
                 {
