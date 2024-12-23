@@ -22,28 +22,16 @@ namespace IngameScript
 {
     partial class Program : MyGridProgram
     {
-        // This file contains your actual script.
-        //
-        // You can either keep all your code here, or you can create separate
-        // code files to make your program easier to navigate while coding.
-        //
-        // Go to:
-        // https://github.com/malware-dev/MDK-SE/wiki/Quick-Introduction-to-Space-Engineers-Ingame-Scripts
-        //
-        // to learn more about ingame scripts.
+        private readonly GridScan _gridScan;
+        private readonly Logger _logger;
 
         public Program()
         {
-            // The constructor, called only once every session and
-            // always before any other method is called. Use it to
-            // initialize your script. 
-            //     
-            // The constructor is optional and can be removed if not
-            // needed.
-            // 
-            // It's recommended to set Runtime.UpdateFrequency 
-            // here, which will allow your script to run itself without a 
-            // timer block.
+            Runtime.UpdateFrequency = UpdateFrequency.Update100;
+            if (Me.CubeGrid.GridSizeEnum != MyCubeSize.Small) throw new Exception("Grid size is not small");
+            _logger = new Logger(Me, GridTerminalSystem);
+            _logger.CollectTextSurfaces("GridManager");
+            _gridScan = new GridScan(GridTerminalSystem);
         }
 
         public void Save()
@@ -58,15 +46,11 @@ namespace IngameScript
 
         public void Main(string argument, UpdateType updateSource)
         {
-            // The main entry point of the script, invoked every time
-            // one of the programmable block's Run actions are invoked,
-            // or the script updates itself. The updateSource argument
-            // describes where the update came from. Be aware that the
-            // updateSource is a  bitfield  and might contain more than 
-            // one update type.
-            // 
-            // The method itself is required, but the arguments above
-            // can be removed if not needed.
+            foreach (Base6Directions.Direction direction in Enum.GetValues(typeof(Base6Directions.Direction)))
+            {
+                _logger.Log(direction.ToString() + ": " + _gridScan.ThrusterByDirection[direction].Count.ToString(), true);
+            }
+            _logger.WriteOutput();
         }
     }
 }
