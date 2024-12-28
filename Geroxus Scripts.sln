@@ -10,6 +10,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AddonGridManager", "AddonGr
 EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Utility", "Utility\Utility.shproj", "{8A3CDCC5-4B55-4D87-A415-698A0E1FF06F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZToggleTestScript", "ZToggleTestScript\ZToggleTestScript.csproj", "{8B3E62BA-798F-44B6-8032-400338991701}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -32,5 +34,9 @@ Global
 		{2290C567-5FDA-4D7B-A177-3C9E45595D35}.Debug|x64.Build.0 = Debug|x64
 		{2290C567-5FDA-4D7B-A177-3C9E45595D35}.Release|x64.ActiveCfg = Release|x64
 		{2290C567-5FDA-4D7B-A177-3C9E45595D35}.Release|x64.Build.0 = Release|x64
+		{8B3E62BA-798F-44B6-8032-400338991701}.Debug|x64.ActiveCfg = Debug|x64
+		{8B3E62BA-798F-44B6-8032-400338991701}.Debug|x64.Build.0 = Debug|x64
+		{8B3E62BA-798F-44B6-8032-400338991701}.Release|x64.ActiveCfg = Release|x64
+		{8B3E62BA-798F-44B6-8032-400338991701}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 EndGlobal
