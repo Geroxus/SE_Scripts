@@ -48,9 +48,17 @@ namespace IngameScript
         {
             foreach (Base6Directions.Direction direction in Enum.GetValues(typeof(Base6Directions.Direction)))
             {
-                _logger.Log(direction.ToString() + ": " + _gridScan.ThrusterByDirection[direction].Count.ToString(), true);
+                _logger.Log(direction.ToString() + ": " + _gridScan.ThrustersByDirection[direction].Count.ToString(), true);
             }
+
+            foreach (IMyLandingGear landingGear in _gridScan.LandingGear)
+            {
+                landingGear.AutoLock = false;
+                if (landingGear.LockMode == LandingGearMode.ReadyToLock && _gridScan.Thrusters.TrueForAll( t => t.CurrentThrust == 0)) landingGear.Lock();
+            }
+            
             _logger.WriteOutput();
+
         }
     }
 }

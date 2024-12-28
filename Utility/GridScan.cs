@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Sandbox.ModAPI.Ingame;
+using SpaceEngineers.Game.ModAPI.Ingame;
 using VRageMath;
 
 namespace IngameScript
@@ -14,8 +15,10 @@ namespace IngameScript
 
         // cache fields
         private Dictionary<Base6Directions.Direction, List<IMyThrust>> _thrusterByDirection = null;
-
-        public Dictionary<Base6Directions.Direction, List<IMyThrust>> ThrusterByDirection => _thrusterByDirection ?? (_thrusterByDirection = GetThrusterByDirection());
+        private List<IMyLandingGear> _landingGears = null;
+        public Dictionary<Base6Directions.Direction, List<IMyThrust>> ThrustersByDirection => _thrusterByDirection ?? (_thrusterByDirection = GetThrusterByDirection());
+        public List<IMyThrust> Thrusters => _thrusterByDirection?.Values.SelectMany(x => x).ToList() ?? new List<IMyThrust>();
+        public List<IMyLandingGear> LandingGear => _landingGears ?? (_landingGears = GetLandingGears());
 
         public GridScan(IMyGridTerminalSystem gridTerminalSystem)
         {
@@ -26,6 +29,16 @@ namespace IngameScript
             if (allShipControllers.Count != 1 && allShipControllers.TrueForAll(c => !c.IsMainCockpit))
                 throw new Exception("There has to be exactly one Controller or a designated MainCockpit");
             _shipController = allShipControllers.Single();
+        }
+
+        private List<IMyLandingGear> GetLandingGears()
+        {
+            List<IMyLandingGear> landingGears = new List<IMyLandingGear>();
+            
+            //expand later to only get actual landing gear/filter out hangar gear or similar
+            _gridTerminalSystem.GetBlocksOfType(landingGears);
+            
+            return landingGears;
         }
 
         private Dictionary<Base6Directions.Direction, List<IMyThrust>> GetThrusterByDirection()
