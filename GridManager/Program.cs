@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using Sandbox.ModAPI.Ingame;
-using Sandbox.ModAPI.Interfaces;
 using SpaceEngineers.Game.ModAPI.Ingame;
 using VRageMath;
 
@@ -11,6 +10,8 @@ namespace IngameScript
     partial class Program : MyGridProgram
     {
         private readonly Logger _logger;
+        private readonly Commander _commander = new Commander();
+        private readonly GridScan _scan;
 
         private readonly IMyShipController _bridge;
         private readonly IMyDoor _door;
@@ -18,7 +19,6 @@ namespace IngameScript
 
         private double _lastSpeed;
 
-        private readonly Commander _commander = new Commander();
         private int _targetVelocity;
         private readonly List<IMyThrust> _forwardThrusters = new List<IMyThrust>();
         private readonly List<IMyThrust> _reverseThrusters = new List<IMyThrust>();
@@ -27,10 +27,26 @@ namespace IngameScript
 
         public Program()
         {
-            Runtime.UpdateFrequency = UpdateFrequency.Update100;
+            // Runtime.UpdateFrequency = UpdateFrequency.Update100;
 
             _logger = new Logger(Me, GridTerminalSystem);
             _logger.CollectTextSurfaces("GridManager", "HangarControl");
+
+            _scan = new GridScan(GridTerminalSystem, "HangarControl.Config");
+            Echo(_scan.ControlGroups.Count.ToString());
+            Echo(_scan.ControlGroups.First().Name);
+            Echo(_scan.ControlGroups.First().Config.Count.ToString());
+            foreach (KeyValuePair<IMyTerminalBlock,BlockConfig> keyValuePair in _scan.ControlGroups.First().Config)
+            {
+                Echo(keyValuePair.Key.DisplayNameText);
+                foreach (string valueName in keyValuePair.Value.Names)
+                {
+                    IConfig config = keyValuePair.Value.GetConfig(valueName);
+                    // Type type = config.GetType();
+                    // var typedValue = config as type;
+                    Echo(valueName + ": " + config.ValueType);
+                }
+            }
 
             List<IMyShipController> shipControllers = new List<IMyShipController>();
             GridTerminalSystem.GetBlocksOfType(shipControllers);
@@ -49,6 +65,7 @@ namespace IngameScript
 
             _connector = GridTerminalSystem.GetBlockWithName("Connector") as IMyShipConnector;
 
+            // Set Gravity Field (Just an estimate coz I'm lazy lol)
             List<IMyGravityGenerator> allGravGenerators = new List<IMyGravityGenerator>();
             GridTerminalSystem.GetBlocksOfType(allGravGenerators);
             IMyGravityGenerator gravityGenerator = allGravGenerators.First();
@@ -301,69 +318,5 @@ namespace IngameScript
             _door.CloseDoor();
             if (_door.Status == DoorStatus.Closed) _door.Enabled = false;
         }
-
-        class Hangar
-        {
-            public List<IMyDoor> PrimaryDoors { get; }
-            public List<IMyFunctionalBlock> HangarLights { get; }
-            public string ID { get; }
-            public HangarState HangarState { get; private set; }
-
-            public Hangar(string id, List<IMyDoor> primaryDoors, List<IMyFunctionalBlock> hangarLights)
-            {
-                ID = id;
-                PrimaryDoors = primaryDoors;
-                HangarLights = hangarLights;
-                HangarState = HangarState.Close;
-
-                foreach (IMyFunctionalBlock light in HangarLights)
-                {
-                    light.Enabled = false;
-                }
-            }
-
-            public void Open()
-            {
-                HangarState = HangarState.Open;
-                foreach (IMyDoor door in PrimaryDoors)
-                {
-                    door.OpenDoor();
-                }
-
-                foreach (IMyFunctionalBlock light in HangarLights)
-                {
-                    if (light.CustomData.Contains("Searchlight"))
-                    {
-                        light.Enabled = true;
-                    }
-                    else if (light.CustomData.Contains("RotatingLight"))
-                    {
-                        light.Enabled = true;
-                        ((IMyReflectorLight)light).Color = Color.OrangeRed;
-                        light.GetProperty("RotationSpeed").As<Single>().SetValue(light, 15);
-                    }
-                }
-            }
-
-            public void Close()
-            {
-                HangarState = HangarState.Close;
-
-                if (PrimaryDoors.TrueForAll(d => d.Status == DoorStatus.Closed))
-                {
-                    foreach (IMyFunctionalBlock light in HangarLights) light.Enabled = false;
-                }
-                else
-                {
-                    foreach (IMyDoor door in PrimaryDoors) door.CloseDoor();
-                }
-            }
-        }
-    }
-
-    enum HangarState
-    {
-        Open,
-        Close
     }
 }

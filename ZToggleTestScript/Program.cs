@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
+using Sandbox.ModAPI.Interfaces.Terminal;
 using VRage;
 using VRage.Collections;
 using VRage.Game;
@@ -22,28 +23,19 @@ namespace IngameScript
 {
     partial class Program : MyGridProgram
     {
-        // This file contains your actual script.
-        //
-        // You can either keep all your code here, or you can create separate
-        // code files to make your program easier to navigate while coding.
-        //
-        // Go to:
-        // https://github.com/malware-dev/MDK-SE/wiki/Quick-Introduction-to-Space-Engineers-Ingame-Scripts
-        //
-        // to learn more about ingame scripts.
+        private readonly Logger _logger;
+        private readonly GridScan _scan;
+        private readonly Commander _commander;
+
 
         public Program()
         {
-            // The constructor, called only once every session and
-            // always before any other method is called. Use it to
-            // initialize your script. 
-            //     
-            // The constructor is optional and can be removed if not
-            // needed.
-            // 
-            // It's recommended to set Runtime.UpdateFrequency 
-            // here, which will allow your script to run itself without a 
-            // timer block.
+            _logger = new Logger(Me, GridTerminalSystem);
+            _logger.CollectTextSurfaces("ToggleTest");
+
+            _scan = new GridScan(GridTerminalSystem);
+
+            _commander = new Commander();
         }
 
         public void Save()
@@ -58,15 +50,11 @@ namespace IngameScript
 
         public void Main(string argument, UpdateType updateSource)
         {
-            // The main entry point of the script, invoked every time
-            // one of the programmable block's Run actions are invoked,
-            // or the script updates itself. The updateSource argument
-            // describes where the update came from. Be aware that the
-            // updateSource is a  bitfield  and might contain more than 
-            // one update type.
-            // 
-            // The method itself is required, but the arguments above
-            // can be removed if not needed.
+            _commander.Read(argument);
+
+            
+            
+            _logger.To("ToggleTest").Consume(b => Echo(b.ToString())).Write().Clear();
         }
     }
 }

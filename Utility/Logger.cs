@@ -50,10 +50,15 @@ namespace IngameScript
             return this;
         }
 
-        public LogTarget Clear()
+        public LogTarget Consume(Action<StringBuilder> action)
+        {
+            action(_builder);
+            return this;
+        }
+
+        public void Clear()
         {
             _builder.Clear();
-            return this;
         }
     }
     class Logger

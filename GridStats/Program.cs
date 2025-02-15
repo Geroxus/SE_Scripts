@@ -133,13 +133,15 @@ namespace IngameScript
             debug.AppendLine("Hydro Tanks");
 
             double currentHydroFillAcummulated = 0;
+            double totalHydroCapacity = 0;
             foreach (IMyGasTank tank in myGasTanks)
             {
                 debug.AppendLine(tank.DisplayNameText);
-
-                currentHydroFillAcummulated += tank.FilledRatio;
+                
+                totalHydroCapacity += tank.Capacity;
+                currentHydroFillAcummulated += tank.Capacity * tank.FilledRatio;
             }
-            double currentHydroFillPercent = currentHydroFillAcummulated / myGasTanks.Count;
+            double currentHydroFillPercent = currentHydroFillAcummulated / totalHydroCapacity;
             output.AppendLine($"Hydrogen Fill status: {Math.Round(currentHydroFillPercent, 2)}%");
 
             WriteTextToSurfaces(output.ToString());
